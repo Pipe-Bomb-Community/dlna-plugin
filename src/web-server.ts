@@ -110,9 +110,16 @@ export class WebServer {
 						id: objectId,
 					});
 				} else {
+					const startingIndexMatch = body.match(
+						/<StartingIndex>(.*?)<\/StartingIndex>/i,
+					);
+					const requestedCountMatch = body.match(
+						/<RequestedCount>(.*?)<\/RequestedCount>/i,
+					);
+
 					const result = await this.structure.getContents(objectId, {
-						offset: 0,
-						amount: 0,
+						offset: startingIndexMatch ? startingIndexMatch[1] : 0,
+						amount: requestedCountMatch ? requestedCountMatch[1] : 0,
 						serverIp: this.ip!,
 						baseUrl: `http://${this.ip}:${this.port}`,
 					});
@@ -129,8 +136,11 @@ export class WebServer {
 			}
 
 			const responseXml = buildDlnaBrowseResponse(entries, totalMatches);
-			res.set("Content-Type", 'text/xml; charset="utf-8"');
-			res.set("EXT", "");
+			res.set({
+				"Content-Type": 'text/xml; charset="utf-8"',
+				Connection: "close",
+				EXT: "",
+			});
 			res.status(200).send(responseXml);
 		});
 

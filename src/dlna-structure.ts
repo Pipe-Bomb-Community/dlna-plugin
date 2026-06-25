@@ -2,7 +2,6 @@ import {
 	AttributeType,
 	DataClient,
 	SavedAlbumArtist,
-	SavedArtist,
 	SavedArtistTrack,
 	SavedAttribute,
 	SavedAttributeValues,
@@ -53,10 +52,11 @@ export class DlnaStructure {
 				};
 			case "all_artists": {
 				const totalMatches = await this.client.getArtistCount();
-				const uuids = await this.client.getArtistUuids(
-					Math.min(options.amount || 200, 200),
-					options.offset,
-				);
+
+				const amount = Math.min(options.amount || 200, 200);
+				const offset = options.offset;
+
+				const uuids = await this.client.getArtistUuids(amount, offset);
 
 				const entries: Promise<ContentsEntry>[] = uuids.map((uuid) =>
 					this.client
@@ -65,13 +65,20 @@ export class DlnaStructure {
 								attributes: true,
 							},
 						})
-						.then((artist) => ({
-							id: `artist/${uuid}`,
-							type: "container",
-							title:
-								this.getAttributeValue(artist?.attributes, "name", "string") ??
-								"Unknown Artist",
-						})),
+						.then((artist) => {
+							const entry: ContentsEntry = {
+								id: `artist/${uuid}`,
+								type: "container",
+								title:
+									this.getAttributeValue(
+										artist?.attributes,
+										"name",
+										"string",
+									) ?? "Unknown Artist",
+								upnpClass: "object.container.person.musicArtist",
+							};
+							return entry;
+						}),
 				);
 
 				return {
@@ -93,13 +100,20 @@ export class DlnaStructure {
 								attributes: true,
 							},
 						})
-						.then((album) => ({
-							id: `album/${uuid}`,
-							type: "container",
-							title:
-								this.getAttributeValue(album?.attributes, "title", "string") ??
-								"Unknown Album",
-						})),
+						.then((album) => {
+							const entry: ContentsEntry = {
+								id: `album/${uuid}`,
+								type: "container",
+								title:
+									this.getAttributeValue(
+										album?.attributes,
+										"title",
+										"string",
+									) ?? "Unknown Album",
+								upnpClass: "object.container.album.musicAlbum",
+							};
+							return entry;
+						}),
 				);
 
 				return {
@@ -128,6 +142,7 @@ export class DlnaStructure {
 								type: "container",
 								id: `artist/${parts[1]}/tracks`,
 								title: "All Tracks",
+								upnpClass: "object.container.musicContainer",
 							},
 							...(artist.albums
 								.map(({ album }) => {
@@ -144,6 +159,7 @@ export class DlnaStructure {
 												"title",
 												"string",
 											) ?? "Unknown Album",
+										upnpClass: "object.container.album.musicAlbum",
 									} as ContentsEntry;
 								})
 								.filter((entry) => !!entry) as ContentsEntry[]),
@@ -278,6 +294,7 @@ export class DlnaStructure {
 					title:
 						this.getAttributeValue(artist?.attributes, "name", "string") ??
 						"Unknown Artist",
+					upnpClass: "object.container.person.musicArtist",
 				};
 			}
 
@@ -286,6 +303,7 @@ export class DlnaStructure {
 					parentId: `artist/${parts[1]}`,
 					type: "container",
 					title: "All Tracks",
+					upnpClass: "object.container.musicContainer",
 				};
 			}
 		}
@@ -303,6 +321,7 @@ export class DlnaStructure {
 					title:
 						this.getAttributeValue(album?.attributes, "name", "string") ??
 						"Unknown Album",
+					upnpClass: "object.container.album.musicAlbum",
 				};
 			}
 		}

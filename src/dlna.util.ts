@@ -6,6 +6,7 @@ export interface DlnaContainer {
 	parentId: string;
 	title: string;
 	upnpClass?: string;
+	childCount?: number;
 }
 
 export interface DlnaItem {
@@ -42,8 +43,9 @@ export function buildDlnaBrowseResponse(
 	const didlItems = entries.map((entry) => {
 		if (entry.type === "container") {
 			const upnpClass = entry.upnpClass || "object.container.storageFolder";
+
 			return `
-    <container id="${entry.id}" parentID="${entry.parentId}" restricted="1" searchable="1">
+    <container id="${entry.id}" parentID="${entry.parentId}" restricted="1" searchable="1" childCount="${entry.childCount ?? 1}">
         <dc:title>${escapeXml(entry.title)}</dc:title>
         <upnp:class>${upnpClass}</upnp:class>
     </container>`.trim();
@@ -102,7 +104,7 @@ export function buildDlnaBrowseResponse(
 
 	const matchCount = totalMatches ?? entries.length;
 	return `<?xml version="1.0" encoding="utf-8"?>
-<s:Envelope xmlns:s="http://schemas.xml-stream.org/soap/envelope/" s:encodingStyle="http://schemas.xml-stream.org/soap/encoding/">
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
     <s:Body>
         <u:BrowseResponse xmlns:u="urn:schemas-upnp-org:service:ContentDirectory:1">
             <Result>${escapedDidl}</Result>
