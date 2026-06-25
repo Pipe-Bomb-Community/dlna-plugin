@@ -6,8 +6,7 @@ import { DlnaStructure } from "./dlna-structure.js";
 import { SessionManager } from "./session-manager.js";
 import { DlnaConfigManager } from "./dlna.config-manager.js";
 import { escapeXml } from "./util.js";
-
-const FRIENDLY_NAME = "Eyezah's test Pipe Bomb";
+import path from "path";
 
 export class WebServer {
 	private server: Server | null = null;
@@ -53,6 +52,10 @@ export class WebServer {
 			res.send("Pipe Bomb DLNA server");
 		});
 
+		const assetsDir = path.join(import.meta.dirname, "..", "assets");
+		this.logger.debug(`Exposing ${assetsDir}`);
+		app.use("/assets", express.static(assetsDir));
+
 		app.get("/dlna/description.xml", (_req, res) => {
 			const xml = `<?xml version="1.0" encoding="utf-8"?>
 <root xmlns="urn:schemas-upnp-org:device-1-0" xmlns:dlna="urn:schemas-dlna-org:device-1-0">
@@ -64,7 +67,15 @@ export class WebServer {
     <manufacturerURL>https://pipebomb.net</manufacturerURL>
     <modelDescription>Pipe Bomb Server</modelDescription>
     <modelName>Pipe Bomb DLNA Plugin</modelName>
-    <modelNumber>1.0</modelNumber>
+	<iconList>
+		<icon>
+			<mimetype>image/png</mimetype>
+			<width>500</width>
+			<height>500</height>
+			<depth>24</depth>
+			<url>/assets/pipe-bomb-logo.png</url>
+		</icon>
+	</iconList>
     <UDN>uuid:${this.uuid}</UDN>
     <dlna:X_DLNADOC xmlns:dlna="urn:schemas-dlna-org:device-1-0">DMS-1.50</dlna:X_DLNADOC>
     <serviceList>
@@ -104,7 +115,9 @@ export class WebServer {
 
 			try {
 				if (browseFlag == "BrowseMetadata") {
-					const entry = await this.structure.getMetadata(objectId);
+					const entry = await this.structure.getMetadata(objectId, {
+						serverIp: this.ip!,
+					});
 					entries.push({
 						...entry,
 						id: objectId,

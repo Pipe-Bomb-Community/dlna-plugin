@@ -15,6 +15,9 @@ export class DlnaConfigManager implements ConfigManager {
 		this.ip = await this.api.getValue("ip", "string");
 		this.port = await this.api.getValue("port", "integer");
 		this.name = await this.api.getValue("name", "string");
+		for (const listener of this.updateListeners) {
+			listener();
+		}
 	}
 
 	addListener(listener: () => void) {

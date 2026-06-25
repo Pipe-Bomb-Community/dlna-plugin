@@ -7,6 +7,7 @@ export interface DlnaContainer {
 	title: string;
 	upnpClass?: string;
 	childCount?: number;
+	albumArtUrl?: string;
 }
 
 export interface DlnaItem {
@@ -41,13 +42,22 @@ export function buildDlnaBrowseResponse(
 	totalMatches?: number | null,
 ): string {
 	const didlItems = entries.map((entry) => {
+		const info: Record<string, string> = {
+			"dc:title": escapeXml(entry.title),
+		};
+		if (entry.albumArtUrl) {
+			info["upnp:albumArtURI"] = escapeXml(entry.albumArtUrl);
+		}
+
 		if (entry.type === "container") {
 			const upnpClass = entry.upnpClass || "object.container.storageFolder";
+			info["upnp:class"] = upnpClass;
 
 			return `
     <container id="${entry.id}" parentID="${entry.parentId}" restricted="1" searchable="1" childCount="${entry.childCount ?? 1}">
-        <dc:title>${escapeXml(entry.title)}</dc:title>
-        <upnp:class>${upnpClass}</upnp:class>
+		${Object.entries(info)
+			.map(([key, value]) => `<${key}>${value}</${key}>`)
+			.join("\n\t")}
     </container>`.trim();
 		} else {
 			const mimeType = entry.mimeType || "audio/mpeg";
@@ -69,19 +79,14 @@ export function buildDlnaBrowseResponse(
 
 			const resElement = `<res protocolInfo="${protoInfo}"${sizeAttr}${durationAttr}>${entry.url}</res>`;
 
-			const info: Record<string, string> = {
-				"dc:title": escapeXml(entry.title),
-				"upnp:class": "object.item.audioItem.musicTrack",
-			};
+			info["upnp:class"] = "object.item.audioItem.musicTrack";
+
 			if (entry.artist) {
 				info["upnp:artist"] = escapeXml(entry.artist);
 				info["dc:creator"] = escapeXml(entry.artist);
 			}
 			if (entry.album) {
 				info["upnp:album"] = escapeXml(entry.album);
-			}
-			if (entry.albumArtUrl) {
-				info["upnp:albumArtURI"] = escapeXml(entry.albumArtUrl);
 			}
 
 			return `<item id="${entry.id}" parentID="${entry.parentId}" restricted="1">

@@ -78,6 +78,8 @@ export class DiscoveryServer {
 			}
 		});
 
-		socket.bind(SSDP_PORT);
+		socket.bind(SSDP_PORT, () => {
+			this.logger.debug(`Started discovery server`);
+		});
 	}
 }

@@ -1,7 +1,9 @@
 import {
 	AttributeType,
 	DataClient,
+	SavedAlbum,
 	SavedAlbumArtist,
+	SavedArtist,
 	SavedArtistTrack,
 	SavedAttribute,
 	SavedAttributeValues,
@@ -9,6 +11,8 @@ import {
 } from "@sdk";
 import { DlnaContainer, DlnaItem } from "./dlna.util.js";
 import { createAttributeRecord } from "./util.js";
+
+const IMAGE_SIZE = 180;
 
 export type ContentsEntry =
 	| Omit<DlnaContainer, "parentId">
@@ -66,15 +70,13 @@ export class DlnaStructure {
 							},
 						})
 						.then((artist) => {
+							if (artist) {
+								return this.getArtistEntry(artist, options.serverIp, "");
+							}
 							const entry: ContentsEntry = {
 								id: `artist/${uuid}`,
 								type: "container",
-								title:
-									this.getAttributeValue(
-										artist?.attributes,
-										"name",
-										"string",
-									) ?? "Unknown Artist",
+								title: "Unknown Artist",
 								upnpClass: "object.container.person.musicArtist",
 							};
 							return entry;
@@ -101,15 +103,13 @@ export class DlnaStructure {
 							},
 						})
 						.then((album) => {
+							if (album) {
+								return this.getAlbumEntry(album, options.serverIp, "");
+							}
 							const entry: ContentsEntry = {
 								id: `album/${uuid}`,
 								type: "container",
-								title:
-									this.getAttributeValue(
-										album?.attributes,
-										"title",
-										"string",
-									) ?? "Unknown Album",
+								title: "Unknown Album",
 								upnpClass: "object.container.album.musicAlbum",
 							};
 							return entry;
@@ -257,6 +257,9 @@ export class DlnaStructure {
 
 	async getMetadata(
 		id: string,
+		options: {
+			serverIp: string;
+		},
 	): Promise<Omit<DlnaContainer, "id"> | Omit<DlnaItem, "id">> {
 		switch (id) {
 			case "0":
@@ -288,14 +291,9 @@ export class DlnaStructure {
 						attributes: true,
 					},
 				});
-				return {
-					parentId: "all_artists",
-					type: "container",
-					title:
-						this.getAttributeValue(artist?.attributes, "name", "string") ??
-						"Unknown Artist",
-					upnpClass: "object.container.person.musicArtist",
-				};
+				if (artist) {
+					return this.getArtistEntry(artist, options.serverIp, "all_artists");
+				}
 			}
 
 			if (parts.length == 3 && parts[2] == "tracks") {
@@ -315,14 +313,9 @@ export class DlnaStructure {
 						attributes: true,
 					},
 				});
-				return {
-					parentId: "all_albums",
-					type: "container",
-					title:
-						this.getAttributeValue(album?.attributes, "name", "string") ??
-						"Unknown Album",
-					upnpClass: "object.container.album.musicAlbum",
-				};
+				if (album) {
+					return this.getAlbumEntry(album, options.serverIp, "all_albums");
+				}
 			}
 		}
 
@@ -405,7 +398,7 @@ export class DlnaStructure {
 		const front = attributes?.front;
 		if (front?.type == "buffer" && front.values.length) {
 			const buffer = front.values[0]!;
-			albumArtUrl = `http://${serverIp}:${this.serverPort}${buffer.url}`;
+			albumArtUrl = `http://${serverIp}:${this.serverPort}${buffer.url}?width=${IMAGE_SIZE}&height=${IMAGE_SIZE}`;
 		}
 
 		return {
@@ -421,6 +414,60 @@ export class DlnaStructure {
 				this.getArtistString(track?.artists, attributes) ?? "Unknown Artist",
 			albumArtUrl,
 			parentId,
+		};
+	}
+
+	private getArtistEntry(
+		artist: SavedArtist,
+		serverIp: string,
+		parentId: string,
+	): DlnaContainer {
+		const attributes = createAttributeRecord(artist?.attributes ?? []);
+
+		let albumArtUrl: string | undefined = undefined;
+
+		const thumb = attributes?.thumb;
+		if (thumb?.type == "buffer" && thumb.values.length) {
+			const buffer = thumb.values[0]!;
+			albumArtUrl = `http://${serverIp}:${this.serverPort}${buffer.url}?width=${IMAGE_SIZE}&height=${IMAGE_SIZE}`;
+		}
+
+		return {
+			id: `artist/${artist.uuid}`,
+			parentId,
+			type: "container",
+			title:
+				this.getAttributeValue(artist?.attributes, "name", "string") ??
+				"Unknown Artist",
+			upnpClass: "object.container.person.musicArtist",
+			albumArtUrl,
+		};
+	}
+
+	private getAlbumEntry(
+		album: SavedAlbum,
+		serverIp: string,
+		parentId: string,
+	): DlnaContainer {
+		const attributes = createAttributeRecord(album?.attributes ?? []);
+
+		let albumArtUrl: string | undefined = undefined;
+
+		const front = attributes?.front;
+		if (front?.type == "buffer" && front.values.length) {
+			const buffer = front.values[0]!;
+			albumArtUrl = `http://${serverIp}:${this.serverPort}${buffer.url}?width=${IMAGE_SIZE}&height=${IMAGE_SIZE}`;
+		}
+
+		return {
+			id: `album/${album.uuid}`,
+			parentId,
+			type: "container",
+			title:
+				this.getAttributeValue(album?.attributes, "title", "string") ??
+				"Unknown Album",
+			upnpClass: "object.container.album.musicAlbum",
+			albumArtUrl,
 		};
 	}
 }
