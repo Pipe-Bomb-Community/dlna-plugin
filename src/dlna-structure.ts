@@ -218,33 +218,12 @@ export class DlnaStructure {
 									return null;
 								}
 
-								const attributes = createAttributeRecord(
-									track.track?.attributes ?? [],
+								return this.getTrackEntry(
+									track.track,
+									options.serverIp,
+									options.baseUrl,
+									"",
 								);
-
-								let albumArtUrl: string | undefined = undefined;
-
-								const front = attributes?.front;
-								if (front?.type == "buffer" && front.values.length) {
-									const buffer = front.values[0]!;
-									albumArtUrl = `http://${options.serverIp}:${this.serverPort}${buffer.url}`;
-								}
-
-								return {
-									type: "item",
-									id: `track/${track.trackUuid}`,
-									title:
-										this.getAttributeValue(attributes, "title", "string") ??
-										"Unknown Track",
-									url: `${options.baseUrl}/stream/${track.track.pluginId}/${track.track.pluginId}/${track.track.trackId}`,
-									duration:
-										this.getAttributeValue(attributes, "duration", "decimal") ??
-										undefined,
-									artist:
-										this.getArtistString(track.track?.artists, attributes) ??
-										"Unknown Artist",
-									albumArtUrl,
-								};
 							})
 							.filter((track) => !!track) as DlnaItem[],
 					};
