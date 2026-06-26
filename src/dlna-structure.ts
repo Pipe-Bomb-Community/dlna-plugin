@@ -407,7 +407,7 @@ export class DlnaStructure {
 			title:
 				this.getAttributeValue(attributes, "title", "string") ??
 				"Unknown Track",
-			url: `${baseUrl}/stream/${track.pluginId}/${track.pluginId}/${track.trackId}`,
+			url: `${baseUrl}/stream/${track.pluginId}/${track.libraryId}/${track.trackId}`,
 			duration:
 				this.getAttributeValue(attributes, "duration", "decimal") ?? undefined,
 			artist:
